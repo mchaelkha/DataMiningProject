@@ -239,6 +239,152 @@ def plot_multiple_bar_by_metric(data, metric, title='', xlabel='', ylabel='', co
     plt.show()
 
 
+def subplot_multiple_bar_by_metric(ax, data, metric, title='', xlabel='', ylabel='', y_max=0, y_scale=None, total_width=0.8, single_width=1, legend=True):
+    """
+    Dynamically generate multiple bar graph/histogram
+    """
+    # default bar and legend colors
+    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    colors.append(u'slateblue')
+    colors.append(u'lightgreen')
+    n_bars = len(data)
+    bar_width = total_width / n_bars
+    # legend bars
+    bars = []
+    for i, (_, values) in enumerate(data.items()):
+        # where to reposition bar from x
+        x_offset = (i - n_bars / 2) * bar_width + bar_width / 2
+
+        # x and y position for each bar
+        for x, y in enumerate(values):
+            y_max = max(y_max, y)
+            bar = ax.bar(x + x_offset, y, width=bar_width * single_width, color=colors[i % len(colors)])
+
+        bars.append(bar[0])
+    # add title, labels, legend
+    if legend:
+        ax.legend(bars, data.keys())
+    plt.xticks(range(len(metric)), metric)
+    if y_scale is not None:
+        plt.yticks(np.arange(0, y_max, y_scale))
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+
+
+def visualize_one(loc_df):
+    print('Question 1')
+    years, data = query_accidents_by_borough_and_year(loc_df)
+    plot_multiple_bar_by_metric(data, years, title='Accidents by Borough from 2013 to 2020', xlabel='Year', ylabel='Accidents')
+
+
+def visualize_two(loc_df):
+    print('Question 2')
+    years, data = query_accidents_by_month_and_year(loc_df)
+    plot_multiple_bar_by_metric(data, years, title='Accidents by Month from 2013 to 2020', xlabel='Year', ylabel='Accidents')
+
+
+def visualize_four(loc_df):
+    print('Question 4')
+    years, data = query_accidents_by_weekday_and_year(loc_df)
+    plot_multiple_bar_by_metric(data, years, title='Accidents by Weekday from 2013 to 2020', xlabel='Year', ylabel='Accidents')
+
+
+def visualize_five(loc_df, subplot=False):
+    """
+    Set subplot to True for side-by-side and similarly scaled plots. Easier for comparisons.
+    Otherwise plot each year individually.
+    """
+    print('Question 5')
+    years, data = query_accidents_by_weekday_and_time_and_year(loc_df)
+
+    if subplot:
+        fig = plt.figure()
+        for index, year in enumerate(years[:4]):
+            legend = index == 0
+            ax = fig.add_subplot(2, 2, index + 1)
+            subplot_multiple_bar_by_metric(ax, data[year], HOURS, title=f'Accidents in Boroughs by Hour in {year}', xlabel='Hour', ylabel='Accidents', y_max=2800, y_scale=500, legend=legend)
+        plt.show()
+
+        fig = plt.figure()
+        for index, year in enumerate(years[4:]):
+            legend = index == 0
+            ax = fig.add_subplot(2, 2, index + 1)
+            subplot_multiple_bar_by_metric(ax, data[year], HOURS, title=f'Accidents in Boroughs by Hour in {year}', xlabel='Hour', ylabel='Accidents', y_max=2800, y_scale=500, legend=legend)
+        plt.show()
+    else:
+        for year in years:
+            plot_multiple_bar_by_metric(data[year], HOURS, title=f'Accidents by Hour each Weekday in {year}', xlabel='Hour', ylabel='Accidents')
+
+
+def visualize_six(loc_df, subplot=False):
+    """
+    Set subplot to True for side-by-side and similarly scaled plots. Easier for comparisons.
+    Otherwise plot each year individually.
+    """
+    print('Question 6')
+    print('months')
+    years, data = query_accidents_by_borough_and_month_and_year(loc_df)
+    if subplot:
+        fig = plt.figure()
+        for index, year in enumerate(years[:4]):
+            legend = index == 0
+            ax = fig.add_subplot(2, 2, index + 1)
+            subplot_multiple_bar_by_metric(ax, data[year], MONTHS.keys(), title=f'Accidents in Boroughs by Month in {year}', xlabel='Month', ylabel='Accidents', y_max=5000, y_scale=1000, legend=legend)
+        plt.show()
+
+        fig = plt.figure()
+        for index, year in enumerate(years[4:]):
+            legend = index == 0
+            ax = fig.add_subplot(2, 2, index + 1)
+            subplot_multiple_bar_by_metric(ax, data[year], MONTHS.keys(), title=f'Accidents in Boroughs by Month in {year}', xlabel='Month', ylabel='Accidents', y_max=5000, y_scale=1000, legend=legend)
+        plt.show()
+    else:
+        for year in years:
+            plot_multiple_bar_by_metric(data[year], MONTHS.keys(), title=f'Accidents in Boroughs by Month in {year}', xlabel='Month', ylabel='Accidents')
+
+    print('weekdays')
+    years, data = query_accidents_by_borough_and_day_and_year(loc_df)
+    if subplot:
+        fig = plt.figure()
+        for index, year in enumerate(years[:4]):
+            legend = index == 0
+            ax = fig.add_subplot(2, 2, index + 1)
+            subplot_multiple_bar_by_metric(ax, data[year], DAYS, title=f'Accidents in Boroughs by Weekday in {year}', xlabel='Weekday', ylabel='Accidents', y_max=7900, y_scale=1000, legend=legend)
+        plt.show()
+
+        fig = plt.figure()
+        for index, year in enumerate(years[4:]):
+            legend = index == 0
+            ax = fig.add_subplot(2, 2, index + 1)
+            subplot_multiple_bar_by_metric(ax, data[year], DAYS, title=f'Accidents in Boroughs by Weekday in {year}', xlabel='Weekday', ylabel='Accidents', y_max=7900, y_scale=1000, legend=legend)
+        plt.show()
+    else:
+        for year in years:
+            plot_multiple_bar_by_metric(data[year], DAYS, title=f'Accidents in Boroughs by Weekday in {year}', xlabel='Weekday', ylabel='Accidents')
+
+    print('hours')
+    years, data = query_accidents_by_borough_and_hour_and_year(loc_df)
+    if subplot:
+        fig = plt.figure()
+        for index, year in enumerate(years[:4]):
+            legend = index == 0
+            ax = fig.add_subplot(2, 2, index + 1)
+            subplot_multiple_bar_by_metric(ax, data[year], HOURS, title=f'Accidents in Boroughs by Hour in {year}', xlabel='Hour', ylabel='Accidents', y_max=4000, y_scale=500, legend=legend)
+        plt.show()
+
+        fig = plt.figure()
+        for index, year in enumerate(years[4:]):
+            legend = index == 0
+            ax = fig.add_subplot(2, 2, index + 1)
+            subplot_multiple_bar_by_metric(ax, data[year], HOURS, title=f'Accidents in Boroughs by Hour in {year}', xlabel='Hour', ylabel='Accidents', y_max=4000, y_scale=500, legend=legend)
+        plt.show()
+    else:
+        for year in years:
+            plot_multiple_bar_by_metric(data[year], HOURS, title=f'Accidents in Boroughs by Hour in {year}', xlabel='Hour', ylabel='Accidents')
+
+
+
 # ============================================================== #
 #  SECTION: Main                                                 #
 # ============================================================== #
@@ -246,34 +392,5 @@ def plot_multiple_bar_by_metric(data, metric, title='', xlabel='', ylabel='', co
 
 if __name__ == '__main__':
     loc_df = read_data()
-
-    print('Question 1')
-    years, data = query_accidents_by_borough_and_year(loc_df)
-    plot_multiple_bar_by_metric(data, years, title='Accidents by Borough from 2013 to 2020', xlabel='Year', ylabel='Accidents')
-
-    print('Question 2')
-    years, data = query_accidents_by_month_and_year(loc_df)
-    plot_multiple_bar_by_metric(data, years, title='Accidents by Month from 2013 to 2020', xlabel='Year', ylabel='Accidents')
-
-    print('Question 4')
-    years, data = query_accidents_by_weekday_and_year(loc_df)
-    plot_multiple_bar_by_metric(data, years, title='Accidents by Weekday from 2013 to 2020', xlabel='Year', ylabel='Accidents')
-
-    print('Question 5')
-    years, data = query_accidents_by_weekday_and_time_and_year(loc_df)
-    for year in years:
-        plot_multiple_bar_by_metric(data[year], HOURS, title=f'Accidents by Hour each Weekday in {year}', xlabel='Hour', ylabel='Accidents')
-
-    print('Question 6')
-    print('months')
-    years, data = query_accidents_by_borough_and_month_and_year(loc_df)
-    for year in years:
-        plot_multiple_bar_by_metric(data[year], MONTHS.keys(), title=f'Accidents in Boroughs by Month in {year}', xlabel='Month', ylabel='Accidents')
-    print('weekdays')
-    years, data = query_accidents_by_borough_and_day_and_year(loc_df)
-    for year in years:
-        plot_multiple_bar_by_metric(data[year], DAYS, title=f'Accidents in Boroughs by Weekday in {year}', xlabel='Weekday', ylabel='Accidents')
-    print('hours')
-    years, data = query_accidents_by_borough_and_hour_and_year(loc_df)
-    for year in years:
-        plot_multiple_bar_by_metric(data[year], HOURS, title=f'Accidents in Boroughs by Hour in {year}', xlabel='Hour', ylabel='Accidents')
+    visualize_five(loc_df, subplot=True)
+    visualize_six(loc_df, subplot=True)
