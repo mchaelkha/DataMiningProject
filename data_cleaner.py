@@ -339,7 +339,7 @@ if __name__ == '__main__':
         for column_type_index in range(1, 6):
             # name of factor column
             factor_column_name = 'CONTRIBUTING FACTOR VEHICLE {}'.format(column_type_index)
-            factor = row[factor_column_name]
+            factor = str.lower(row[factor_column_name])
             if pd.isnull(factor):
                 break
             if factor != 'Unspecified' and not str.isnumeric(factor):
@@ -352,7 +352,7 @@ if __name__ == '__main__':
         for column_type_index in range(1, 6):
             # name of vehicle type column
             vehicle_type_column_name = 'VEHICLE TYPE CODE {}'.format(column_type_index)
-            v_type = row[vehicle_type_column_name]
+            v_type = str.lower(row[vehicle_type_column_name])
             if pd.isnull(v_type):
                 break
             # even if a vehicle is not cited if a pedestrian is injured a pedestrian was involved
