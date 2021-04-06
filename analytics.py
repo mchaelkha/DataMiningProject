@@ -4,7 +4,6 @@
 
 # standard library
 from collections import defaultdict
-import urllib
 
 # third party library
 import numpy as np
@@ -13,8 +12,6 @@ from scipy.stats import gaussian_kde
 from mpl_toolkits.basemap import Basemap
 import matplotlib.pyplot as plt
 from PIL import Image
-
-from geopy import distance
 
 # local
 
@@ -49,6 +46,14 @@ BOROUGH_BOUNDS = {
     'QUEENS': [(40.541444, -73.961150), (40.800279, -73.699538)],
     'MANHATTAN': [(40.701239, -74.019387), (40.877565, -73.910405)],
     'BROOKLYN': [(40.571755, -74.041960), (40.740757, -73.861229)]
+}
+
+BOROUGH_EXTENT = {
+    'STATEN ISLAND': (-74.249940, -74.060880, 40.500084, 40.648273),
+    'BRONX': (-73.934663, -73.782936, 40.785124, 40.912884),
+    'QUEENS': (-73.959744, -73.700550, 40.554388, 40.800262),
+    'MANHATTAN': (-74.017940, -73.911230, 40.701256, 40.872917),
+    'BROOKLYN': (-74.040820, -73.861230, 40.572006, 40.738853)
 }
 
 LATITUDE_BOUNDS = [40.49, 40.92]
@@ -94,6 +99,9 @@ def df_filter_by(df, prop, value):
 
 
 def df_between_coords(df, c1, c2):
+    """
+    Filter dataframe by being between two coordinates, c1 and c2.
+    """
     min_lat, min_long = c1
     max_lat, max_long = c2
     within_lat = (min_lat < df['LATITUDE']) & (df['LATITUDE'] < max_lat)
@@ -151,12 +159,6 @@ def read_data(set_location=False, save_cleaned=False, save_years=False):
     if save_cleaned:
         cleaned_df.to_csv('cleaned_analytics_data.csv')
     return cleaned_df, year_df_dict
-
-
-def within_bounds(lat, long, other_lat, other_long, radius):
-    """
-    TODO: implement using geopy distance
-    """
 
 
 def query_accidents_by_borough_and_year(cleaned_df, print_step=False):
@@ -387,7 +389,7 @@ def plot_basemap_scatter(cleaned_df):
 
 def density_estimation(x, y):
     """
-    Compute the density of lat and long
+    Compute the kernel density of lat and long into a third dimension using a Gaussian
     """
     X, Y = np.mgrid[x.min():x.max():100j, y.min():y.max():100j]
     positions = np.vstack([X.ravel(), Y.ravel()])
@@ -397,68 +399,52 @@ def density_estimation(x, y):
     return X, Y, Z
 
 
-def plot_basemap_heat_density(cleaned_df, borough, gis_service='World_Topo_Map', num_levels=11, cmap='Reds', colorbar=True, title=""):
-    latlon = cleaned_df.loc[cleaned_df['LONGITUDE'] != 0, ['LATITUDE', 'LONGITUDE']].to_numpy()
+def plot_basemap_heat_density(borough_df, borough, xprecision=3, yprecision=3, num_levels=11, cmap='Reds', colorbar=True, title=""):
+    """
+    Generate the heatmap density contours for the given data that has already been
+    filtered to only contain the borough and only valid coordinates in that borough.
+    """
+    # fig = plt.figure()
+    _, ax = plt.subplots()
+    latlon = borough_df[['LATITUDE', 'LONGITUDE']].to_numpy()
     # longitude
     x = latlon[:, 1]
     # latitude
     y = latlon[:, 0]
 
+    # perform kernel density estimation on longitude, latitude
     X, Y, Z = density_estimation(x, y)
 
-    m = Basemap(llcrnrlon=x.min(),
-            llcrnrlat=y.min(),
-            urcrnrlon=x.max(),
-            urcrnrlat=y.max())
+    extent = BOROUGH_EXTENT[borough]
+    llcrnrlon, urcrnrlon, llcrnrlat, urcrnrlat = extent
+    # use image of borough map as background
+    m = Basemap(llcrnrlon=llcrnrlon,
+            llcrnrlat=llcrnrlat,
+            urcrnrlon=urcrnrlon,
+            urcrnrlat=urcrnrlat)
     im = Image.open(f'{borough.lower()}.png')
-    m.imshow(im, origin='upper', alpha=0.85)
+    m.imshow(im, origin='upper', alpha=0.85, extent=extent)
 
-    # not working
-    # m = Basemap(llcrnrlon=x.min(),
-    #         llcrnrlat=y.min(),
-    #         urcrnrlon=x.max(),
-    #         urcrnrlat=y.max(),
-    #         epsg=4269,
-    #         fix_aspect=False)
-    # bm_url = f"http://server.arcgisonline.com/ArcGIS/rest/services/{gis_service}/MapServer/export?bbox={m.llcrnrlon},{m.llcrnrlat},{m.urcrnrlon},{m.urcrnrlat}&bboxSR={m.epsg}&imageSR={m.epsg}&size=5000,8043&dpi=96&format=png32&transparent=true&f=image"
-    # bm_url = f"http://server.arcgisonline.com/ArcGIS/rest/services/{gis_service}/MapServer/export?bbox={m.llcrnrlon},{m.llcrnrlat},{m.urcrnrlon},{m.urcrnrlat}&bboxSR={m.epsg}&size=5000,8043&dpi=96&format=png32&transparent=true&f=image"
-    # bm_url = f"http://server.arcgisonline.com/ArcGIS/rest/services/{gis_service}/MapServer/export?bbox={m.llcrnrlon},{m.llcrnrlat},{m.urcrnrlon},{m.urcrnrlat}&bboxSR={m.epsg}&dpi=96&format=png32&transparent=true&f=image"
-    # print(bm_url)
-    # im = Image.open(urllib.request.urlopen(bm_url))
-    # m.imshow(im, origin="upper", alpha=0.6)
-    # m.imshow(im, origin="upper", alpha=0.6, aspect='auto')
-    # m.imshow(im, origin="upper", alpha=0.6, interpolation='none')
-    # m.imshow(im, origin="upper", extent=(x.min(), x.max(), y.min(), y.max()), alpha=0.85)
+    # add axis settings
+    xlabels = np.around(np.linspace(llcrnrlon, urcrnrlon, xprecision), 2)
+    ylabels = np.around(np.linspace(llcrnrlat, urcrnrlat, yprecision), 2)
+    ax.set_xlim(llcrnrlon, urcrnrlon)
+    ax.set_ylim(llcrnrlat, urcrnrlat)
+    ax.set_xticks(xlabels)
+    ax.set_yticks(ylabels)
+    m.drawmeridians(xlabels, labels=[1,0,0,0], linewidth=0)
+    m.drawparallels(ylabels, labels=[0,0,0,1], linewidth=0)
 
-    print(x.min(), x.max(), y.min(), y.max())
-    print(x.min(), y.min(), x.max(), y.max())
-    # not working
-    # m = Basemap(llcrnrlon=LONGITUDE_BOUNDS[0],
-    #         llcrnrlat=LATITUDE_BOUNDS[0],
-    #         urcrnrlon=LONGITUDE_BOUNDS[1],
-    #         urcrnrlat=LATITUDE_BOUNDS[1],
-    #         epsg=4326)
-    # m.arcgisimage(service='World_Topo_Map', xpixels=10000, verbose=True)
-
-    # working
-    # m = Basemap(llcrnrlon=x.min(),
-    #         llcrnrlat=y.min(),
-    #         urcrnrlon=x.max(),
-    #         urcrnrlat=y.max(),
-    #         ellps='WGS84',
-    #         resolution='f',
-    #         area_thresh=0.6)
-    # m.drawmapboundary(fill_color='#DDEEFF')
-    # m.drawcoastlines(color='gray')
-    # m.drawcountries(color='gray')
-    # m.fillcontinents(color='#FFEEDD')
-
+    # generate density contours
     levels = np.linspace(0, Z.max(), num_levels)
-    m.contourf(X, Y, Z, levels=levels, cmap=cmap, alpha=0.5)
+    m.contourf(X, Y, Z, levels=levels, cmap=cmap, alpha=0.5, extent=np.around([x.min(), x.max(), y.min(), y.max()], 3))
 
+    # show contour bar
     if colorbar:
-        plt.colorbar()
+        m.colorbar(pad=0.5)
+
     plt.title(title)
+
     plt.show()
 
 
@@ -602,14 +588,15 @@ def visualize_seven(year_df_dict, boroughs=BOROUGH_COORDS.keys(), selected_year=
             plot_basemap_heat_density(borough_df, borough, title=title)
 
 
-
 def run_visualizations(cleaned_df, year_df_dict, subplot=False):
+    """
+    Run all possible visualizations.
+    """
     visualize_one(cleaned_df)
     visualize_two(cleaned_df)
     visualize_four(cleaned_df)
     visualize_five(cleaned_df, subplot=subplot)
     visualize_six(cleaned_df, subplot=subplot)
-
     visualize_seven(year_df_dict)
 
 
@@ -620,14 +607,4 @@ def run_visualizations(cleaned_df, year_df_dict, subplot=False):
 
 if __name__ == '__main__':
     cleaned_df, year_df_dict = read_data()
-
-    # plot_basemap_scatter(cleaned_df[:100])
-
-    # borough = 'BROOKLYN'
-    # cleaned_df = cleaned_df[cleaned_df['BOROUGH'] == borough]
-    # c1, c2 = BOROUGH_BOUNDS[borough]
-    # cleaned_df = df_between_coords(cleaned_df, c1, c2)
-    # plot_basemap_heat_density(cleaned_df, borough)
-    visualize_seven(year_df_dict, selected_year=2019)
-
-    # run_visualizations(cleaned_df, subplot=True)
+    run_visualizations(cleaned_df, year_df_dict, subplot=True)
