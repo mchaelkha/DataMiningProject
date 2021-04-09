@@ -1,2 +1,5 @@
-progressbar2
+matplotlib
 pandas
+progressbar2
+Pillow
+scipy
