@@ -494,7 +494,7 @@ def visualize_one(cleaned_df):
     print('Question 1')
     years, data = query_accidents_by_borough_and_year(cleaned_df)
     plot_multiple_bar_by_metric(data, years, title='Accidents by Borough from 2013 to 2020', xlabel='Year', ylabel='Accidents')
-    metric = [datetime(2013, 1, 1), datetime(2020, 12, 31)]
+    metric = [datetime(2013, 1, 1), datetime(2021, 1, 1)]
     plot_density_by_metric(cleaned_df, metric, 'CRASH TIME', 'BOROUGH', hue_order=BOROUGH_COORDS.keys(), title='Accident Density by Borough from 2013 to 2020', xlabel='Year', ylabel='Accident Density')
 
 
@@ -568,12 +568,6 @@ def visualize_six(cleaned_df, year_df_dict, month=True, weekday=True, hour=True,
             plt.show()
         for year in years:
             plot_multiple_bar_by_metric(data[year], MONTHS.keys(), title=f'Accidents in Boroughs by Month in {year}', xlabel='Month', ylabel='Accidents')
-            # year_df = year_df_dict[year]
-            # make a copy to overwrite columns for visualization
-            # year_df = year_df.copy()
-            # year_df['MONTH'] = year_df['CRASH TIME'].dt.month
-            # metric = [1, 12]
-            # plot_density_by_metric(year_df, metric, 'MONTH', 'BOROUGH', title=f'Accident Density by Month in {year}', xlabel='Month', ylabel='Accident Density')
             metric = [datetime(year, 1, 1), datetime(year, 12, 31)]
             plot_density_by_metric(cleaned_df, metric, 'CRASH TIME', 'BOROUGH', hue_order=BOROUGH_COORDS.keys(), title=f'Accident Density by Month in {year}', xlabel='Month', ylabel='Accident Density')
 
@@ -678,9 +672,5 @@ def run_visualizations(cleaned_df, year_df_dict, subplot=False):
 
 if __name__ == '__main__':
     # cleaned_df, year_df_dict = read_data(save_cleaned=True)
-    # diamonds = sns.load_dataset("diamonds")
-    # print(diamonds)
     cleaned_df, year_df_dict = load_from_saved()
-    # visualize_one(cleaned_df)
-    visualize_six(cleaned_df, year_df_dict)
-    # run_visualizations(cleaned_df, year_df_dict, subplot=True)
+    run_visualizations(cleaned_df, year_df_dict, subplot=True)
