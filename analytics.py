@@ -4,13 +4,15 @@
 
 # standard library
 from collections import defaultdict
+from datetime import datetime
 
 # third party library
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
 from mpl_toolkits.basemap import Basemap
-import matplotlib.pyplot as plt
+import seaborn as sns
 from PIL import Image
 
 # local
@@ -107,6 +109,24 @@ def df_between_coords(df, c1, c2):
     within_lat = (min_lat < df['LATITUDE']) & (df['LATITUDE'] < max_lat)
     within_long = (min_long < df['LONGITUDE']) & (df['LONGITUDE'] < max_long)
     return df[within_lat & within_long]
+
+
+def df_between_years(df, y1, y2):
+    """
+    Filter dataframe by being between two year, y1 and y2.
+    """
+    return df[(y1 <= df['CRASH TIME'].dt.year) & (df['CRASH TIME'].dt.year <= y2)]
+
+
+def load_from_saved():
+    year_df_dict = {}
+    for year in YEARS:
+        year_df = pd.read_csv(f'year_{year}.csv')
+        year_df['CRASH TIME'] = pd.to_datetime(year_df['CRASH TIME'])
+        year_df_dict[year] = year_df
+    cleaned_df = pd.read_csv('cleaned_analytics_data.csv')
+    cleaned_df['CRASH TIME'] = pd.to_datetime(cleaned_df['CRASH TIME'])
+    return cleaned_df, year_df_dict
 
 
 def read_data(set_location=False, save_cleaned=False, save_years=False):
@@ -234,7 +254,7 @@ def query_accidents_by_weekday_and_time_and_year(cleaned_df, print_step=False):
     return YEARS, counts
 
 
-def query_accidents_by_borough_and_month_and_year(cleaned_df,print_step=False):
+def query_accidents_by_borough_and_month_and_year(cleaned_df, print_step=False):
     """
     Section 6
     """
@@ -325,6 +345,28 @@ def plot_multiple_bar_by_metric(data, metric, title='', xlabel='', ylabel='', co
     if legend:
         ax.legend(bars, data.keys())
     plt.xticks(range(len(metric)), metric)
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.show()
+
+
+def plot_density_by_metric(df, metric, metric_name, hue, hue_order=[], title='', xlabel='', ylabel='', colors=None, legend=True):
+    """
+    Dynamically generate density plot
+    """
+    # default bar and legend colors
+    if colors is None:
+        colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+        colors.append(u'slateblue')
+        colors.append(u'lightgreen')
+    sns.set_palette(sns.color_palette(colors))
+    if not hue_order:
+        sns.kdeplot(data=df, x=metric_name, hue=hue, legend=legend)
+    else:
+        sns.kdeplot(data=df, x=metric_name, hue=hue, hue_order=hue_order, legend=legend)
+    # add title, labels, legend
+    plt.xlim(metric[0], metric[1])
     plt.title(title)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
@@ -452,6 +494,8 @@ def visualize_one(cleaned_df):
     print('Question 1')
     years, data = query_accidents_by_borough_and_year(cleaned_df)
     plot_multiple_bar_by_metric(data, years, title='Accidents by Borough from 2013 to 2020', xlabel='Year', ylabel='Accidents')
+    metric = [datetime(2013, 1, 1), datetime(2020, 12, 31)]
+    plot_density_by_metric(cleaned_df, metric, 'CRASH TIME', 'BOROUGH', hue_order=BOROUGH_COORDS.keys(), title='Accident Density by Borough from 2013 to 2020', xlabel='Year', ylabel='Accident Density')
 
 
 def visualize_two(cleaned_df):
@@ -466,7 +510,7 @@ def visualize_four(cleaned_df):
     plot_multiple_bar_by_metric(data, years, title='Accidents by Weekday from 2013 to 2020', xlabel='Year', ylabel='Accidents')
 
 
-def visualize_five(cleaned_df, subplot=False):
+def visualize_five(cleaned_df, year_df_dict, subplot=False):
     """
     Set subplot to True for side-by-side and similarly scaled plots. Easier for comparisons.
     Otherwise plot each year individually.
@@ -490,9 +534,16 @@ def visualize_five(cleaned_df, subplot=False):
         plt.show()
     for year in years:
         plot_multiple_bar_by_metric(data[year], HOURS, title=f'Accidents by Hour each Weekday in {year}', xlabel='Hour', ylabel='Accidents')
+        year_df = year_df_dict[year]
+        # make a copy to overwrite columns for visualization
+        year_copy_df = year_df.copy()
+        year_copy_df['WEEKDAY'] = year_copy_df['CRASH TIME'].dt.day_name()
+        year_copy_df['CRASH TIME'] = year_copy_df['CRASH TIME'].dt.hour
+        metric = [0, 23]
+        plot_density_by_metric(year_copy_df, metric, 'CRASH TIME', 'WEEKDAY', title=f'Accident Density by Weekday in {year}', xlabel='Hour', ylabel='Accident Density')
 
 
-def visualize_six(cleaned_df, month=True, weekday=True, hour=True, subplot=False):
+def visualize_six(cleaned_df, year_df_dict, month=True, weekday=True, hour=True, subplot=False):
     """
     Set subplot to True for side-by-side and similarly scaled plots. Easier for comparisons.
     Otherwise plot each year individually.
@@ -517,6 +568,14 @@ def visualize_six(cleaned_df, month=True, weekday=True, hour=True, subplot=False
             plt.show()
         for year in years:
             plot_multiple_bar_by_metric(data[year], MONTHS.keys(), title=f'Accidents in Boroughs by Month in {year}', xlabel='Month', ylabel='Accidents')
+            # year_df = year_df_dict[year]
+            # make a copy to overwrite columns for visualization
+            # year_df = year_df.copy()
+            # year_df['MONTH'] = year_df['CRASH TIME'].dt.month
+            # metric = [1, 12]
+            # plot_density_by_metric(year_df, metric, 'MONTH', 'BOROUGH', title=f'Accident Density by Month in {year}', xlabel='Month', ylabel='Accident Density')
+            metric = [datetime(year, 1, 1), datetime(year, 12, 31)]
+            plot_density_by_metric(cleaned_df, metric, 'CRASH TIME', 'BOROUGH', hue_order=BOROUGH_COORDS.keys(), title=f'Accident Density by Month in {year}', xlabel='Month', ylabel='Accident Density')
 
     if weekday:
         print('weekdays')
@@ -537,6 +596,12 @@ def visualize_six(cleaned_df, month=True, weekday=True, hour=True, subplot=False
             plt.show()
         for year in years:
             plot_multiple_bar_by_metric(data[year], DAYS, title=f'Accidents in Boroughs by Weekday in {year}', xlabel='Weekday', ylabel='Accidents')
+            # year_df = year_df_dict[year]
+            # # make a copy to overwrite columns for visualization
+            # year_df = year_df.copy()
+            # year_df['WEEKDAY'] = year_df['CRASH TIME'].dt.weekday
+            # metric = [0, 6]
+            # plot_density_by_metric(year_df, metric, 'WEEKDAY', 'BOROUGH', hue_order=BOROUGH_COORDS.keys(), title=f'Accident Density by Weekday in {year}', xlabel='Weekday', ylabel='Accident Density')
 
     if hour:
         print('hours')
@@ -557,6 +622,12 @@ def visualize_six(cleaned_df, month=True, weekday=True, hour=True, subplot=False
             plt.show()
         for year in years:
             plot_multiple_bar_by_metric(data[year], HOURS, title=f'Accidents in Boroughs by Hour in {year}', xlabel='Hour', ylabel='Accidents')
+            year_df = year_df_dict[year]
+            # make a copy to overwrite columns for visualization
+            year_df = year_df.copy()
+            year_df['HOUR'] = year_df['CRASH TIME'].dt.hour
+            metric = [0, 23]
+            plot_density_by_metric(year_df, metric, 'HOUR', 'BOROUGH', hue_order=BOROUGH_COORDS.keys(), title=f'Accident Density by Hour in {year}', xlabel='Hour', ylabel='Accident Density')
 
 
 def visualize_seven(year_df_dict, boroughs=BOROUGH_COORDS.keys(), selected_year=None):
@@ -595,8 +666,8 @@ def run_visualizations(cleaned_df, year_df_dict, subplot=False):
     visualize_one(cleaned_df)
     visualize_two(cleaned_df)
     visualize_four(cleaned_df)
-    visualize_five(cleaned_df, subplot=subplot)
-    visualize_six(cleaned_df, subplot=subplot)
+    visualize_five(cleaned_df, year_df_dict, subplot=subplot)
+    visualize_six(cleaned_df, year_df_dict, subplot=subplot)
     visualize_seven(year_df_dict)
 
 
@@ -606,5 +677,10 @@ def run_visualizations(cleaned_df, year_df_dict, subplot=False):
 
 
 if __name__ == '__main__':
-    cleaned_df, year_df_dict = read_data()
-    run_visualizations(cleaned_df, year_df_dict, subplot=True)
+    # cleaned_df, year_df_dict = read_data(save_cleaned=True)
+    # diamonds = sns.load_dataset("diamonds")
+    # print(diamonds)
+    cleaned_df, year_df_dict = load_from_saved()
+    # visualize_one(cleaned_df)
+    visualize_six(cleaned_df, year_df_dict)
+    # run_visualizations(cleaned_df, year_df_dict, subplot=True)
