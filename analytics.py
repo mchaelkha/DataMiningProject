@@ -32,21 +32,24 @@ MOTOR_VEHICLE_COLLISIONS_CSV = 'Motor_Vehicle_Collisions_-_Crashes.csv'
 #  SECTION: Helper Definitions                                   #
 # ============================================================== #
 
+# mapping of borough to its latitude and longitude
 BOROUGH_COORDS = {
-    'STATEN ISLAND': [40.58, 74.15],
-    'BRONX': [40.84, 73.86],
-    'QUEENS': [40.73, 73.79],
-    'MANHATTAN': [40.78, 73.97],
-    'BROOKLYN': [40.68, 73.94]
+    'STATEN ISLAND': (40.58, 74.15),
+    'BRONX': (40.84, 73.86),
+    'QUEENS': (40.73, 73.79),
+    'MANHATTAN': (40.78, 73.97),
+    'BROOKLYN': (40.68, 73.94)
 }
 
+# mapping of borough to its min, max latitude and longitude
 BOROUGH_BOUNDS = {
-    'STATEN ISLAND': [(40.500084, -74.249940), (40.648273, -74.060880)],
-    'BRONX': [(40.785124, -73.934663), (40.914714, -73.765061)],
-    'QUEENS': [(40.541444, -73.961150), (40.800279, -73.699538)],
-    'MANHATTAN': [(40.701239, -74.019387), (40.877565, -73.910405)],
-    'BROOKLYN': [(40.571755, -74.041960), (40.740757, -73.861229)]
+    'STATEN ISLAND': ((40.500084, -74.249940), (40.648273, -74.060880)),
+    'BRONX': ((40.785124, -73.934663), (40.914714, -73.765061)),
+    'QUEENS': ((40.541444, -73.961150), (40.800279, -73.699538)),
+    'MANHATTAN': ((40.701239, -74.019387), (40.877565, -73.910405)),
+    'BROOKLYN': ((40.571755, -74.041960), (40.740757, -73.861229))
 }
+
 
 BOROUGH_EXTENT = {
     'STATEN ISLAND': (-74.249940, -74.060880, 40.500084, 40.648273),
@@ -56,12 +59,19 @@ BOROUGH_EXTENT = {
     'BROOKLYN': (-74.040820, -73.861230, 40.572006, 40.738853)
 }
 
-LATITUDE_BOUNDS = [40.49, 40.92]
+# min latitude of NYC
+MIN_LATITUDE = 40.49
+# max latitude of NYC
+MAX_LATITUDE = 40.92
 
-LONGITUDE_BOUNDS = [-74.25, -73.7]
+# min, max longitude of NYC
+MIN_LONGITUDE = -74.25
+MAX_LONGITUDE = -73.7
 
+# range of selected years
 YEARS = range(2013, 2021)
 
+# selected months
 MONTHS = {
     1: 'January',
     2: 'February',
@@ -77,33 +87,37 @@ MONTHS = {
     12: 'December'
 }
 
+# range of days
 DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
+# range of hours, military time
 HOURS = range(0, 24)
 
 
-def df_filter_by(df, prop, value):
+def df_filter_by(df, column, value):
     """
-    Ways to filter the dataframe.
+    Returns a dataframe with rows selected from df that have value within column.
     """
-    if prop == 'borough':
+    if column == 'borough':
         return df[df['BOROUGH'] == value]
-    elif prop == 'year':
+    elif column == 'year':
         return df[df['CRASH TIME'].dt.year == value]
-    elif prop == 'month':
+    elif column == 'month':
         return df[df['CRASH TIME'].dt.month == value]
-    elif prop == 'day':
+    elif column == 'day':
         return df[df['CRASH TIME'].dt.day_name() == value]
-    elif prop == 'hour':
+    elif column == 'hour':
         return df[df['CRASH TIME'].dt.hour == value]
 
 
-def df_between_coords(df, c1, c2):
+def df_between_coords(df, coord1, coord2):
     """
     Filter dataframe by being between two coordinates, c1 and c2.
     """
-    min_lat, min_long = c1
-    max_lat, max_long = c2
+    # min, max latitude and longitude of coord1
+    min_lat, min_long = coord1
+    # min, max latitude and longitude of coord2
+    max_lat, max_long = coord2
     within_lat = (min_lat < df['LATITUDE']) & (df['LATITUDE'] < max_lat)
     within_long = (min_long < df['LONGITUDE']) & (df['LONGITUDE'] < max_long)
     return df[within_lat & within_long]
@@ -141,10 +155,8 @@ def read_data(set_location=False, save_cleaned=False, save_years=False):
             cleaned_df.loc[((cleaned_df['BOROUGH'] == borough) & (cleaned_df['LATITUDE'] == 0)), ['LATITUDE', 'LONGITUDE']] = location
 
     # filter out coordinates that are not in NYC
-    min_lat, max_lat = LATITUDE_BOUNDS
-    min_long, max_long = LONGITUDE_BOUNDS
-    within_lat = (min_lat < cleaned_df['LATITUDE']) & (cleaned_df['LATITUDE'] < max_lat)
-    within_long = (min_long < cleaned_df['LONGITUDE']) & (cleaned_df['LONGITUDE'] < max_long)
+    within_lat = (MIN_LATITUDE < cleaned_df['LATITUDE']) & (cleaned_df['LATITUDE'] < MAX_LATITUDE)
+    within_long = (MIN_LONGITUDE < cleaned_df['LONGITUDE']) & (cleaned_df['LONGITUDE'] < MAX_LONGITUDE)
     # these records should have borough labels and should not be thrown out as we handled that before
     no_lat_long = ((cleaned_df['LATITUDE'] == 0) & (cleaned_df['LATITUDE'] == 0))
     cleaned_df = cleaned_df[(within_lat & within_long) | no_lat_long]
@@ -161,55 +173,34 @@ def read_data(set_location=False, save_cleaned=False, save_years=False):
     return cleaned_df, year_df_dict
 
 
-def query_accidents_by_borough_and_year(cleaned_df, print_step=False):
+def query_accidents_by_value_and_year(cleaned_df, column_name, column_dict, print_step=False):
     """
-    Section 1
+    Parses dataframe and returns a dictionary indicating accidents in each month by year.
     """
+    # creates a dictionary where each key maps to a list
     counts = defaultdict(list)
     for year in YEARS:
         if print_step:
             print('Showing year:', year)
+        # remove rows from df that don't contain year in year column
         year_df = df_filter_by(cleaned_df, 'year', year)
-        for borough in BOROUGH_COORDS.keys():
-            borough_df = df_filter_by(year_df, 'borough', borough)
+
+        # handle possibility of column dict being a dict
+        column_dict_keys = column_dict
+        if isinstance(column_dict_keys, dict):
+            column_dict_keys = column_dict_keys.keys()
+
+        for column_value in column_dict_keys:
+            # remove rows from df that don't contain column_value in column_name column
+            column_value_df = df_filter_by(year_df, column_name, column_value)
             if print_step:
-                print('   ', borough, year_df.shape[0])
-            counts[borough].append(borough_df.shape[0])
-    return YEARS, counts
+                print('   ', column_dict[column_value] if(isinstance(column_dict, dict)) else column_value, column_value_df.shape[0])
+            # append number of remaining rows in month_df,
+            # each index of counts[value] correlates with year
+            counts[column_dict[column_value] if(isinstance(column_dict, dict)) else column_value].append(column_value_df.shape[0])
 
-
-def query_accidents_by_month_and_year(cleaned_df, print_step=False):
-    """
-    Section 2
-    """
-    counts = defaultdict(list)
-    for year in YEARS:
-        if print_step:
-            print('Showing year:', year)
-        year_df = df_filter_by(cleaned_df, 'year', year)
-        for month in MONTHS.keys():
-            month_df = df_filter_by(year_df, 'month', month)
-            if print_step:
-                print('   ', MONTHS[month], month_df.shape[0])
-            counts[MONTHS[month]].append(month_df.shape[0])
-    return YEARS, counts
-
-
-def query_accidents_by_weekday_and_year(cleaned_df, print_step=False):
-    """
-    Section 4
-    """
-    counts = defaultdict(list)
-    for year in YEARS:
-        if print_step:
-            print('Showing year:', year)
-        year_df = df_filter_by(cleaned_df, 'year', year)
-        for day in DAYS:
-            day_df = df_filter_by(year_df, 'day', day)
-            if print_step:
-                print('   ', day, day_df.shape[0])
-            counts[day].append(day_df.shape[0])
-    return YEARS, counts
+    # return dictionary of mapping of values to a list of accident counts by year
+    return counts
 
 
 def query_accidents_by_weekday_and_time_and_year(cleaned_df, print_step=False):
@@ -231,7 +222,7 @@ def query_accidents_by_weekday_and_time_and_year(cleaned_df, print_step=False):
                 if print_step:
                     print('       ', day, day_df.shape[0])
                 counts[year][day].append(day_df.shape[0])
-    return YEARS, counts
+    return counts
 
 
 def query_accidents_by_borough_and_month_and_year(cleaned_df,print_step=False):
@@ -252,7 +243,7 @@ def query_accidents_by_borough_and_month_and_year(cleaned_df,print_step=False):
                 if print_step:
                     print('       ', MONTHS[month], month_df.shape[0])
                 counts[year][borough].append(month_df.shape[0])
-    return YEARS, counts
+    return counts
 
 
 def query_accidents_by_borough_and_day_and_year(cleaned_df, print_step=False):
@@ -273,7 +264,7 @@ def query_accidents_by_borough_and_day_and_year(cleaned_df, print_step=False):
                 if print_step:
                     print('       ', day, day_df.shape[0])
                 counts[year][borough].append(day_df.shape[0])
-    return YEARS, counts
+    return counts
 
 
 def query_accidents_by_borough_and_hour_and_year(cleaned_df, print_step=False):
@@ -295,7 +286,7 @@ def query_accidents_by_borough_and_hour_and_year(cleaned_df, print_step=False):
                 if print_step:
                     print('       ', hour, hour_df.shape[0])
                 counts[year][borough].append(hour_df.shape[0])
-    return YEARS, counts
+    return counts
 
 
 def plot_multiple_bar_by_metric(data, metric, title='', xlabel='', ylabel='', colors=None, total_width=0.8, single_width=1, legend=True):
@@ -370,20 +361,20 @@ def plot_basemap_scatter(cleaned_df):
     """
     latlon = cleaned_df.loc[cleaned_df['LONGITUDE'] != 0, ['LATITUDE', 'LONGITUDE']].to_numpy()
 
-    m = Basemap(llcrnrlon=LONGITUDE_BOUNDS[0],
-            llcrnrlat=LATITUDE_BOUNDS[0],
-            urcrnrlon=LONGITUDE_BOUNDS[1],
-            urcrnrlat=LATITUDE_BOUNDS[1],
-            ellps='WGS84',
-            resolution='f',
-            area_thresh=0.6)
-    m.drawcoastlines(color='gray', zorder=2)
-    m.drawcountries(color='gray', zorder=2)
-    m.fillcontinents(color='#FFEEDD')
-    m.drawstates(color='gray', zorder=2)
-    m.drawmapboundary(fill_color='#DDEEFF')
+    map = Basemap(llcrnrlon=MIN_LONGITUDE,
+                  llcrnrlat=MIN_LATITUDE,
+                  urcrnrlon=MAX_LONGITUDE,
+                  urcrnrlat=MAX_LATITUDE,
+                  ellps='WGS84',
+                  resolution='f',
+                  area_thresh=0.6)
+    map.drawcoastlines(color='gray', zorder=2)
+    map.drawcountries(color='gray', zorder=2)
+    map.fillcontinents(color='#FFEEDD')
+    map.drawstates(color='gray', zorder=2)
+    map.drawmapboundary(fill_color='#DDEEFF')
 
-    m.scatter(latlon[:, 1], latlon[:, 0], marker='o', c='red', zorder=3, latlon=True)
+    map.scatter(latlon[:, 1], latlon[:, 0], marker='o', c='red', zorder=3, latlon=True)
     plt.show()
 
 
@@ -449,21 +440,22 @@ def plot_basemap_heat_density(borough_df, borough, xprecision=3, yprecision=3, n
 
 
 def visualize_one(cleaned_df):
+    """Creates visualizations in directory 1."""
     print('Question 1')
-    years, data = query_accidents_by_borough_and_year(cleaned_df)
-    plot_multiple_bar_by_metric(data, years, title='Accidents by Borough from 2013 to 2020', xlabel='Year', ylabel='Accidents')
+    data = query_accidents_by_value_and_year(cleaned_df, 'borough', BOROUGH_COORDS)
+    plot_multiple_bar_by_metric(data, YEARS, title='Accidents by Borough from 2013 to 2020', xlabel='Year', ylabel='Accidents')
 
 
 def visualize_two(cleaned_df):
     print('Question 2')
-    years, data = query_accidents_by_month_and_year(cleaned_df)
-    plot_multiple_bar_by_metric(data, years, title='Accidents by Month from 2013 to 2020', xlabel='Year', ylabel='Accidents')
+    data = query_accidents_by_value_and_year(cleaned_df, 'month', MONTHS)
+    plot_multiple_bar_by_metric(data, YEARS, title='Accidents by Month from 2013 to 2020', xlabel='Year', ylabel='Accidents')
 
 
 def visualize_four(cleaned_df):
     print('Question 4')
-    years, data = query_accidents_by_weekday_and_year(cleaned_df)
-    plot_multiple_bar_by_metric(data, years, title='Accidents by Weekday from 2013 to 2020', xlabel='Year', ylabel='Accidents')
+    data = query_accidents_by_value_and_year(cleaned_df, 'day', DAYS)
+    plot_multiple_bar_by_metric(data, YEARS, title='Accidents by Weekday from 2013 to 2020', xlabel='Year', ylabel='Accidents')
 
 
 def visualize_five(cleaned_df, subplot=False):
@@ -472,23 +464,23 @@ def visualize_five(cleaned_df, subplot=False):
     Otherwise plot each year individually.
     """
     print('Question 5')
-    years, data = query_accidents_by_weekday_and_time_and_year(cleaned_df)
+    data = query_accidents_by_weekday_and_time_and_year(cleaned_df)
 
     if subplot:
         fig = plt.figure()
-        for index, year in enumerate(years[:4]):
+        for index, year in enumerate(YEARS[:4]):
             legend = index == 0
             ax = fig.add_subplot(2, 2, index + 1)
             subplot_multiple_bar_by_metric(ax, data[year], HOURS, title=f'Accidents in Boroughs by Hour in {year}', xlabel='Hour', ylabel='Accidents', y_max=2800, y_scale=500, legend=legend)
         plt.show()
 
         fig = plt.figure()
-        for index, year in enumerate(years[4:]):
+        for index, year in enumerate(YEARS[4:]):
             legend = index == 0
             ax = fig.add_subplot(2, 2, index + 1)
             subplot_multiple_bar_by_metric(ax, data[year], HOURS, title=f'Accidents in Boroughs by Hour in {year}', xlabel='Hour', ylabel='Accidents', y_max=2800, y_scale=500, legend=legend)
         plt.show()
-    for year in years:
+    for year in YEARS:
         plot_multiple_bar_by_metric(data[year], HOURS, title=f'Accidents by Hour each Weekday in {year}', xlabel='Hour', ylabel='Accidents')
 
 
@@ -500,62 +492,62 @@ def visualize_six(cleaned_df, month=True, weekday=True, hour=True, subplot=False
     print('Question 6')
     if month:
         print('months')
-        years, data = query_accidents_by_borough_and_month_and_year(cleaned_df)
+        data = query_accidents_by_borough_and_month_and_year(cleaned_df)
         if subplot:
             fig = plt.figure()
-            for index, year in enumerate(years[:4]):
+            for index, year in enumerate(YEARS[:4]):
                 legend = index == 0
                 ax = fig.add_subplot(2, 2, index + 1)
                 subplot_multiple_bar_by_metric(ax, data[year], MONTHS.keys(), title=f'Accidents in Boroughs by Month in {year}', xlabel='Month', ylabel='Accidents', y_max=5000, y_scale=1000, legend=legend)
             plt.show()
 
             fig = plt.figure()
-            for index, year in enumerate(years[4:]):
+            for index, year in enumerate(YEARS[4:]):
                 legend = index == 0
                 ax = fig.add_subplot(2, 2, index + 1)
                 subplot_multiple_bar_by_metric(ax, data[year], MONTHS.keys(), title=f'Accidents in Boroughs by Month in {year}', xlabel='Month', ylabel='Accidents', y_max=5000, y_scale=1000, legend=legend)
             plt.show()
-        for year in years:
+        for year in YEARS:
             plot_multiple_bar_by_metric(data[year], MONTHS.keys(), title=f'Accidents in Boroughs by Month in {year}', xlabel='Month', ylabel='Accidents')
 
     if weekday:
         print('weekdays')
-        years, data = query_accidents_by_borough_and_day_and_year(cleaned_df)
+        data = query_accidents_by_borough_and_day_and_year(cleaned_df)
         if subplot:
             fig = plt.figure()
-            for index, year in enumerate(years[:4]):
+            for index, year in enumerate(YEARS[:4]):
                 legend = index == 0
                 ax = fig.add_subplot(2, 2, index + 1)
                 subplot_multiple_bar_by_metric(ax, data[year], DAYS, title=f'Accidents in Boroughs by Weekday in {year}', xlabel='Weekday', ylabel='Accidents', y_max=7900, y_scale=1000, legend=legend)
             plt.show()
 
             fig = plt.figure()
-            for index, year in enumerate(years[4:]):
+            for index, year in enumerate(YEARS[4:]):
                 legend = index == 0
                 ax = fig.add_subplot(2, 2, index + 1)
                 subplot_multiple_bar_by_metric(ax, data[year], DAYS, title=f'Accidents in Boroughs by Weekday in {year}', xlabel='Weekday', ylabel='Accidents', y_max=7900, y_scale=1000, legend=legend)
             plt.show()
-        for year in years:
+        for year in YEARS:
             plot_multiple_bar_by_metric(data[year], DAYS, title=f'Accidents in Boroughs by Weekday in {year}', xlabel='Weekday', ylabel='Accidents')
 
     if hour:
         print('hours')
-        years, data = query_accidents_by_borough_and_hour_and_year(cleaned_df)
+        data = query_accidents_by_borough_and_hour_and_year(cleaned_df)
         if subplot:
             fig = plt.figure()
-            for index, year in enumerate(years[:4]):
+            for index, year in enumerate(YEARS[:4]):
                 legend = index == 0
                 ax = fig.add_subplot(2, 2, index + 1)
                 subplot_multiple_bar_by_metric(ax, data[year], HOURS, title=f'Accidents in Boroughs by Hour in {year}', xlabel='Hour', ylabel='Accidents', y_max=4000, y_scale=500, legend=legend)
             plt.show()
 
             fig = plt.figure()
-            for index, year in enumerate(years[4:]):
+            for index, year in enumerate(YEARS[4:]):
                 legend = index == 0
                 ax = fig.add_subplot(2, 2, index + 1)
                 subplot_multiple_bar_by_metric(ax, data[year], HOURS, title=f'Accidents in Boroughs by Hour in {year}', xlabel='Hour', ylabel='Accidents', y_max=4000, y_scale=500, legend=legend)
             plt.show()
-        for year in years:
+        for year in YEARS:
             plot_multiple_bar_by_metric(data[year], HOURS, title=f'Accidents in Boroughs by Hour in {year}', xlabel='Hour', ylabel='Accidents')
 
 
