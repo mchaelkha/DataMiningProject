@@ -9,6 +9,7 @@ from datetime import datetime
 # third party library
 import numpy as np
 import pandas as pd
+from pandas.api.types import CategoricalDtype
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
 from mpl_toolkits.basemap import Basemap
@@ -507,7 +508,7 @@ def visualize_two(cleaned_df):
 def visualize_four(cleaned_df):
     print('Question 4')
     years, data = query_accidents_by_weekday_and_year(cleaned_df)
-    plot_multiple_bar_by_metric(data, years, title='Accidents by Weekday from 2013 to 2020', xlabel='Year', ylabel='Accidents')
+    plot_multiple_bar_by_metric(data, years, title='Accidents by Day of the Week from 2013 to 2020', xlabel='Year', ylabel='Accidents')
 
 
 def visualize_five(cleaned_df, year_df_dict, subplot=False):
@@ -523,24 +524,28 @@ def visualize_five(cleaned_df, year_df_dict, subplot=False):
         for index, year in enumerate(years[:4]):
             legend = index == 0
             ax = fig.add_subplot(2, 2, index + 1)
-            subplot_multiple_bar_by_metric(ax, data[year], HOURS, title=f'Accidents in Boroughs by Hour in {year}', xlabel='Hour', ylabel='Accidents', y_max=2800, y_scale=500, legend=legend)
+            subplot_multiple_bar_by_metric(ax, data[year], HOURS, title=f'Accidents by Hour each Day of the Week in {year}', xlabel='Hour', ylabel='Accidents', y_max=2800, y_scale=500, legend=legend)
         plt.show()
 
         fig = plt.figure()
         for index, year in enumerate(years[4:]):
             legend = index == 0
             ax = fig.add_subplot(2, 2, index + 1)
-            subplot_multiple_bar_by_metric(ax, data[year], HOURS, title=f'Accidents in Boroughs by Hour in {year}', xlabel='Hour', ylabel='Accidents', y_max=2800, y_scale=500, legend=legend)
+            subplot_multiple_bar_by_metric(ax, data[year], HOURS, title=f'Accidents by Hour each Day of the Week in {year}', xlabel='Hour', ylabel='Accidents', y_max=2800, y_scale=500, legend=legend)
         plt.show()
     for year in years:
-        plot_multiple_bar_by_metric(data[year], HOURS, title=f'Accidents by Hour each Weekday in {year}', xlabel='Hour', ylabel='Accidents')
+        plot_multiple_bar_by_metric(data[year], HOURS, title=f'Accidents by Hour each Day of the Week in {year}', xlabel='Hour', ylabel='Accidents')
         year_df = year_df_dict[year]
         # make a copy to overwrite columns for visualization
         year_copy_df = year_df.copy()
-        year_copy_df['WEEKDAY'] = year_copy_df['CRASH TIME'].dt.day_name()
+        year_copy_df['DAY'] = year_copy_df['CRASH TIME'].dt.day_name()
         year_copy_df['CRASH TIME'] = year_copy_df['CRASH TIME'].dt.hour
+        cat_type = CategoricalDtype(categories=DAYS, ordered=True)
+        year_copy_df['DAY'] = year_copy_df['DAY'].astype(cat_type)
+        # year_copy_df.sort_values(by=['DAY'], inplace=True)
+        # year_copy_df.groupby(['DAY']).sum().reindex(DAYS)
         metric = [0, 23]
-        plot_density_by_metric(year_copy_df, metric, 'CRASH TIME', 'WEEKDAY', title=f'Accident Density by Weekday in {year}', xlabel='Hour', ylabel='Accident Density')
+        plot_density_by_metric(year_copy_df, metric, 'CRASH TIME', 'DAY', title=f'Accident Density by Hour each Day of the Week in {year}', xlabel='Hour', ylabel='Accident Density')
 
 
 def visualize_six(cleaned_df, year_df_dict, month=True, weekday=True, hour=True, subplot=False):
@@ -579,17 +584,17 @@ def visualize_six(cleaned_df, year_df_dict, month=True, weekday=True, hour=True,
             for index, year in enumerate(years[:4]):
                 legend = index == 0
                 ax = fig.add_subplot(2, 2, index + 1)
-                subplot_multiple_bar_by_metric(ax, data[year], DAYS, title=f'Accidents in Boroughs by Weekday in {year}', xlabel='Weekday', ylabel='Accidents', y_max=7900, y_scale=1000, legend=legend)
+                subplot_multiple_bar_by_metric(ax, data[year], DAYS, title=f'Accidents in Boroughs by Day of the Week in {year}', xlabel='Day of the Week', ylabel='Accidents', y_max=7900, y_scale=1000, legend=legend)
             plt.show()
 
             fig = plt.figure()
             for index, year in enumerate(years[4:]):
                 legend = index == 0
                 ax = fig.add_subplot(2, 2, index + 1)
-                subplot_multiple_bar_by_metric(ax, data[year], DAYS, title=f'Accidents in Boroughs by Weekday in {year}', xlabel='Weekday', ylabel='Accidents', y_max=7900, y_scale=1000, legend=legend)
+                subplot_multiple_bar_by_metric(ax, data[year], DAYS, title=f'Accidents in Boroughs by Day of the Week in {year}', xlabel='Day of the Week', ylabel='Accidents', y_max=7900, y_scale=1000, legend=legend)
             plt.show()
         for year in years:
-            plot_multiple_bar_by_metric(data[year], DAYS, title=f'Accidents in Boroughs by Weekday in {year}', xlabel='Weekday', ylabel='Accidents')
+            plot_multiple_bar_by_metric(data[year], DAYS, title=f'Accidents in Boroughs by Day of the Week in {year}', xlabel='Day of the Week', ylabel='Accidents')
             # year_df = year_df_dict[year]
             # # make a copy to overwrite columns for visualization
             # year_df = year_df.copy()
@@ -621,7 +626,7 @@ def visualize_six(cleaned_df, year_df_dict, month=True, weekday=True, hour=True,
             year_df = year_df.copy()
             year_df['HOUR'] = year_df['CRASH TIME'].dt.hour
             metric = [0, 23]
-            plot_density_by_metric(year_df, metric, 'HOUR', 'BOROUGH', hue_order=BOROUGH_COORDS.keys(), title=f'Accident Density by Hour in {year}', xlabel='Hour', ylabel='Accident Density')
+            plot_density_by_metric(year_df, metric, 'HOUR', 'BOROUGH', hue_order=BOROUGH_COORDS.keys(), title=f'Accident Density in Boroughs by Hour in {year}', xlabel='Hour', ylabel='Accident Density')
 
 
 def visualize_seven(year_df_dict, boroughs=BOROUGH_COORDS.keys(), selected_year=None):
@@ -671,6 +676,6 @@ def run_visualizations(cleaned_df, year_df_dict, subplot=False):
 
 
 if __name__ == '__main__':
-    # cleaned_df, year_df_dict = read_data(save_cleaned=True)
-    cleaned_df, year_df_dict = load_from_saved()
-    run_visualizations(cleaned_df, year_df_dict, subplot=True)
+    cleaned_df, year_df_dict = read_data()
+    # cleaned_df, year_df_dict = load_from_saved()
+    run_visualizations(cleaned_df, year_df_dict, subplot=False)
