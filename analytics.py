@@ -26,6 +26,9 @@ from PIL import Image
 # CSV of motor vehicle collisions
 MOTOR_VEHICLE_COLLISIONS_CSV = 'Motor_Vehicle_Collisions_-_Crashes.csv'
 
+# preprocessed cleaned vehicle colision file
+CLEAN_MOTOR_VEHICLE_COLLISIONS_CSV = 'Clean_Motor_Vehicle_Collisions_-_Crashes.csv'
+
 # ============================================================== #
 #  SECTION: Class Definitions                                   #
 # ============================================================== #
@@ -650,16 +653,73 @@ def visualize_seven(year_df_dict, boroughs=BOROUGH_COORDS.keys(), selected_year=
             plot_basemap_heat_density(borough_df, borough, title=title)
 
 
+def visualize_three():
+    """
+    Create a visualization for each type of accident per year.
+    Accident type is classified by contributing factors and/or involved parties.
+    """
+    # read in cleaned data - visualization specific
+    cleaned_df = pd.read_csv(CLEAN_MOTOR_VEHICLE_COLLISIONS_CSV)
+    # creates a dictionary where each key maps to a list
+    counts = defaultdict(list)
+    for year in YEARS:
+        filtered_data = cleaned_df[cleaned_df['CRASH YEAR {}'.format(year)] == 1]
+        for column in ['Drug Related Factor', 'Personal Factor', 'Environmental Cause Factor', 'Failure To Obey Traffic Factor']:
+            # remove rows from df that don't contain column_value in column_name column
+            column_value_df = filtered_data[filtered_data[column] == 1]
+
+            counts[column].append(column_value_df.shape[0])
+    plot_multiple_bar_by_metric(counts, YEARS, title='Accident Causation by Year', xlabel='Year', ylabel='Accidents')
+
+    # creates a dictionary where each key maps to a list
+    counts = defaultdict(list)
+    for year in YEARS:
+        filtered_data = cleaned_df[cleaned_df['CRASH YEAR {}'.format(year)] == 1]
+        column ='INVOLVED TYPE PEDESTRIAN'
+        # remove rows from df that don't contain column_value in column_name column
+        column_value_df = filtered_data[filtered_data[column] == 1]
+        counts[column].append(column_value_df.shape[0])
+
+        # remove rows from df that don't contain column_value in column_name column
+        column_value_df = filtered_data[filtered_data[column] == 0]
+        counts['VEHICLE ONLY'].append(column_value_df.shape[0])
+    plot_multiple_bar_by_metric(counts, YEARS, title='Involved Parties by Year', xlabel='Year', ylabel='Accidents')
+
+def visualize_eight():
+    """
+    Create a visualization depicting involved parties in accidents by year.
+    Involved party is either vehicle only or vehicle and pedestrian
+    """
+    # read in cleaned data - visualization specific
+    cleaned_df = pd.read_csv(CLEAN_MOTOR_VEHICLE_COLLISIONS_CSV)
+
+    # creates a dictionary where each key maps to a list
+    counts = defaultdict(list)
+    for year in YEARS:
+        filtered_data = cleaned_df[cleaned_df['CRASH YEAR {}'.format(year)] == 1]
+        column ='INVOLVED TYPE PEDESTRIAN'
+        # remove rows from df that don't contain column_value in column_name column
+        column_value_df = filtered_data[filtered_data[column] == 1]
+        counts[column].append(column_value_df.shape[0])
+
+        # remove rows from df that don't contain column_value in column_name column
+        column_value_df = filtered_data[filtered_data[column] == 0]
+        counts['VEHICLE ONLY'].append(column_value_df.shape[0])
+    plot_multiple_bar_by_metric(counts, YEARS, title='Involved Parties by Year', xlabel='Year', ylabel='Accidents')
+
+
 def run_visualizations(cleaned_df, year_df_dict, subplot=False):
     """
     Run all possible visualizations.
     """
     visualize_one(cleaned_df)
     visualize_two(cleaned_df)
+    visualize_three()
     visualize_four(cleaned_df)
     visualize_five(cleaned_df, year_df_dict, subplot=subplot)
     visualize_six(cleaned_df, year_df_dict, subplot=subplot)
     visualize_seven(year_df_dict)
+    visualize_eight()
 
 
 # ============================================================== #

@@ -25,8 +25,8 @@ CLEAN_MOTOR_VEHICLE_COLLISIONS_CSV = 'Clean_Motor_Vehicle_Collisions_-_Crashes.c
 # sample data for testing
 SAMPLE_DATA_CSV = 'sample_data.csv'
 
-YEARS = ['2020', '2019']
-MONTHS = ['03', '04']
+YEARS = []
+MONTHS = []
 
 LATITUDE_BIN_SIZE = .001
 LONGITUDE_BIN_SIZE = .001
@@ -320,8 +320,8 @@ if __name__ == '__main__':
     unique_factor_columns = {factor: [0] * len(collision_df) for factor in list(GENERALIZED_CAUSE_TO_SPECIFIC.keys())}
     vehicle_type_columns = {vehicle_type: [0] * len(collision_df) for vehicle_type in list(GENERALIZED_TYPE_TO_SPECIFIC.keys())}
 
-    year_columns = {year: [0] * len(collision_df) for year in YEARS}
-    month_columns = {month: [0] * len(collision_df) for month in MONTHS}
+    year_columns = dict()
+    month_columns = dict()
     day_columns = {day: [0] * len(collision_df) for day in ['Sunday', 'Monday', 'Tuesday', 'Wednesday',
                                                             'Thursday', 'Friday', 'Saturday']}
 
@@ -332,7 +332,11 @@ if __name__ == '__main__':
         # get crash date information
         crash_date = row['CRASH DATE']
         month, day, year = row['CRASH DATE'].split('/')
+        if year not in year_columns:
+            year_columns[year] = [0] * len(collision_df)
         year_columns[year][row_index] = 1
+        if month not in month_columns:
+            month_columns[month] = [0] * len(collision_df)
         month_columns[month][row_index] = 1
         day_columns[datetime.strptime(crash_date, '%m/%d/%Y').strftime('%A')][row_index] = 1
 
@@ -340,7 +344,7 @@ if __name__ == '__main__':
         for column_type_index in range(1, 6):
             # name of factor column
             factor_column_name = 'CONTRIBUTING FACTOR VEHICLE {}'.format(column_type_index)
-            factor = str.lower(row[factor_column_name])
+            factor = str(row[factor_column_name])
             if pd.isnull(factor):
                 break
             if factor != 'Unspecified' and not str.isnumeric(factor):
@@ -353,7 +357,7 @@ if __name__ == '__main__':
         for column_type_index in range(1, 6):
             # name of vehicle type column
             vehicle_type_column_name = 'VEHICLE TYPE CODE {}'.format(column_type_index)
-            v_type = str.lower(row[vehicle_type_column_name])
+            v_type = str.lower(str(row[vehicle_type_column_name]))
             if pd.isnull(v_type):
                 break
             # even if a vehicle is not cited if a pedestrian is injured a pedestrian was involved
