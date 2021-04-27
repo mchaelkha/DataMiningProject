@@ -442,7 +442,6 @@ def plot_basemap_heat_density(borough_df, borough, xprecision=3, yprecision=3, n
     Generate the heatmap density contours for the given data that has already been
     filtered to only contain the borough and only valid coordinates in that borough.
     """
-    # fig = plt.figure()
     _, ax = plt.subplots()
     latlon = borough_df[['LATITUDE', 'LONGITUDE']].to_numpy()
     # longitude
@@ -547,8 +546,6 @@ def visualize_five(cleaned_df, year_df_dict, subplot=False):
         year_copy_df['CRASH TIME'] = year_copy_df['CRASH TIME'].dt.hour
         cat_type = CategoricalDtype(categories=DAYS, ordered=True)
         year_copy_df['DAY'] = year_copy_df['DAY'].astype(cat_type)
-        # year_copy_df.sort_values(by=['DAY'], inplace=True)
-        # year_copy_df.groupby(['DAY']).sum().reindex(DAYS)
         metric = [0, 23]
         plot_density_by_metric(year_copy_df, metric, 'CRASH TIME', 'DAY', title=f'Accident Density by Hour each Day of the Week in {year}', xlabel='Hour', ylabel='Accident Density')
 
@@ -564,6 +561,7 @@ def visualize_six(cleaned_df, year_df_dict, month=True, weekday=True, hour=True,
     if month:
         print('months')
         data = query_accidents_by_borough_and_month_and_year(cleaned_df)
+        # plot 2013-2017 and 2018-2021 side by side
         if subplot:
             fig = plt.figure()
             for index, year in enumerate(YEARS[:4]):
@@ -586,6 +584,7 @@ def visualize_six(cleaned_df, year_df_dict, month=True, weekday=True, hour=True,
     if weekday:
         print('weekdays')
         data = query_accidents_by_borough_and_day_and_year(cleaned_df)
+        # plot 2013-2017 and 2018-2021 side by side
         if subplot:
             fig = plt.figure()
             for index, year in enumerate(YEARS[:4]):
