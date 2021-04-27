@@ -56,7 +56,7 @@ BOROUGH_BOUNDS = {
     'BROOKLYN': ((40.571755, -74.041960), (40.740757, -73.861229))
 }
 
-
+# mapping of borough boundaries for the density heat map
 BOROUGH_EXTENT = {
     'STATEN ISLAND': (-74.249940, -74.060880, 40.500084, 40.648273),
     'BRONX': (-73.934663, -73.782936, 40.785124, 40.912884),
@@ -137,6 +137,9 @@ def df_between_years(df, y1, y2):
 
 
 def load_from_saved():
+    """
+    Load from a saved version of the data file into a dataframe.
+    """
     year_df_dict = {}
     for year in YEARS:
         year_df = pd.read_csv(f'year_{year}.csv')
@@ -171,12 +174,6 @@ def read_data(set_location=False, save_cleaned=False, save_years=False):
 
     # clean an edge case on Queensboro Bridge having wrong longitude and no borough
     cleaned_df.loc[cleaned_df['LONGITUDE'] == -201.23706, ['BOROUGH', 'LONGITUDE']] = ['MANHATTAN', -73.95337]
-
-    # arbitrarily set the coordinates for records that have a borough, but do not have a location (1160 records)
-    if set_location:
-        for borough in BOROUGH_COORDS.keys():
-            location = BOROUGH_COORDS[borough]
-            cleaned_df.loc[((cleaned_df['BOROUGH'] == borough) & (cleaned_df['LATITUDE'] == 0)), ['LATITUDE', 'LONGITUDE']] = location
 
     # filter out coordinates that are not in NYC
     within_lat = (MIN_LATITUDE < cleaned_df['LATITUDE']) & (cleaned_df['LATITUDE'] < MAX_LATITUDE)
@@ -229,7 +226,8 @@ def query_accidents_by_value_and_year(cleaned_df, column_name, column_dict, prin
 
 def query_accidents_by_weekday_and_time_and_year(cleaned_df, print_step=False):
     """
-    Section 5
+    Parses dataframe and returns a dictionary indicating accidents each hour
+    for each day of the week in each year.
     """
     counts = defaultdict(lambda: defaultdict(list))
     for year in YEARS:
@@ -251,7 +249,8 @@ def query_accidents_by_weekday_and_time_and_year(cleaned_df, print_step=False):
 
 def query_accidents_by_borough_and_month_and_year(cleaned_df, print_step=False):
     """
-    Section 6
+    Parses dataframe and returns a dictionary indicating accidents by borough
+    for each month in each year.
     """
     counts = defaultdict(lambda: defaultdict(list))
     for year in YEARS:
@@ -272,7 +271,8 @@ def query_accidents_by_borough_and_month_and_year(cleaned_df, print_step=False):
 
 def query_accidents_by_borough_and_day_and_year(cleaned_df, print_step=False):
     """
-    Section 6
+    Parses dataframe and returns a dictionary indicating accidents by borough
+    for each day of the week in each year.
     """
     counts = defaultdict(lambda: defaultdict(list))
     for year in YEARS:
@@ -293,7 +293,8 @@ def query_accidents_by_borough_and_day_and_year(cleaned_df, print_step=False):
 
 def query_accidents_by_borough_and_hour_and_year(cleaned_df, print_step=False):
     """
-    Section 6
+    Parses dataframe and returns a dictionary indicating accidents by borough
+    for each hour of the day in each year.
     """
     counts = defaultdict(lambda: defaultdict(list))
     for year in YEARS:
@@ -424,16 +425,16 @@ def plot_basemap_scatter(cleaned_df):
     plt.show()
 
 
-def density_estimation(x, y):
+def density_estimation(lon, lat):
     """
     Compute the kernel density of lat and long into a third dimension using a Gaussian
     """
-    X, Y = np.mgrid[x.min():x.max():100j, y.min():y.max():100j]
-    positions = np.vstack([X.ravel(), Y.ravel()])
-    values = np.vstack([x, y])
-    kernel = gaussian_kde(values)
-    Z = np.reshape(kernel(positions).T, X.shape)
-    return X, Y, Z
+    lon_values, lat_values = np.mgrid[lon.min():lon.max():100j, lat.min():lat.max():100j]
+    positions = np.vstack([lon_values.ravel(), lat_values.ravel()])
+    # compute the kernel from latitude and longitude values
+    kernel = gaussian_kde(np.vstack([lon, lat]))
+    density_values = np.reshape(kernel(positions).T, lon_values.shape)
+    return lon_values, lat_values, density_values
 
 
 def plot_basemap_heat_density(borough_df, borough, xprecision=3, yprecision=3, num_levels=11, cmap='Reds', colorbar=True, title=""):
@@ -445,12 +446,12 @@ def plot_basemap_heat_density(borough_df, borough, xprecision=3, yprecision=3, n
     _, ax = plt.subplots()
     latlon = borough_df[['LATITUDE', 'LONGITUDE']].to_numpy()
     # longitude
-    x = latlon[:, 1]
+    lon = latlon[:, 1]
     # latitude
-    y = latlon[:, 0]
+    lat = latlon[:, 0]
 
     # perform kernel density estimation on longitude, latitude
-    X, Y, Z = density_estimation(x, y)
+    lon_values, lat_values, density_values = density_estimation(lon, lat)
 
     extent = BOROUGH_EXTENT[borough]
     llcrnrlon, urcrnrlon, llcrnrlat, urcrnrlat = extent
@@ -473,8 +474,9 @@ def plot_basemap_heat_density(borough_df, borough, xprecision=3, yprecision=3, n
     m.drawparallels(ylabels, labels=[0,0,0,1], linewidth=0)
 
     # generate density contours
-    levels = np.linspace(0, Z.max(), num_levels)
-    m.contourf(X, Y, Z, levels=levels, cmap=cmap, alpha=0.5, extent=np.around([x.min(), x.max(), y.min(), y.max()], 3))
+    levels = np.linspace(0, density_values.max(), num_levels)
+    m.contourf(lon_values, lat_values, density_values, levels=levels, cmap=cmap, \
+        alpha=0.5, extent=np.around([lon.min(), lon.max(), lat.min(), lat.max()], 3))
 
     # show contour bar
     if colorbar:
@@ -486,7 +488,9 @@ def plot_basemap_heat_density(borough_df, borough, xprecision=3, yprecision=3, n
 
 
 def visualize_one(cleaned_df):
-    """Creates visualizations in directory 1."""
+    """
+    Filter the dataframe to get the data for plotting a histogram and density plot by borough and year.
+    """
     print('Question 1')
     data = query_accidents_by_value_and_year(cleaned_df, 'borough', BOROUGH_COORDS)
     plot_multiple_bar_by_metric(data, YEARS, title='Accidents by Borough from 2013 to 2020', xlabel='Year', ylabel='Accidents')
@@ -495,12 +499,18 @@ def visualize_one(cleaned_df):
 
 
 def visualize_two(cleaned_df):
+    """
+    Filter the dataframe to get the data for plotting a histogram by month and year.
+    """
     print('Question 2')
     data = query_accidents_by_value_and_year(cleaned_df, 'month', MONTHS)
     plot_multiple_bar_by_metric(data, YEARS, title='Accidents by Month from 2013 to 2020', xlabel='Year', ylabel='Accidents')
 
 
 def visualize_four(cleaned_df):
+    """
+    Filter the dataframe to get the data for plotting a histogram by by day of the week and year.
+    """
     print('Question 4')
     data = query_accidents_by_value_and_year(cleaned_df, 'day', DAYS)
     plot_multiple_bar_by_metric(data, YEARS, title='Accidents by Day of the Week from 2013 to 2020', xlabel='Year', ylabel='Accidents')
@@ -545,6 +555,8 @@ def visualize_five(cleaned_df, year_df_dict, subplot=False):
 
 def visualize_six(cleaned_df, year_df_dict, month=True, weekday=True, hour=True, subplot=False):
     """
+    Filter the dataframe to get the data for plotting histograms and density plots for each individual year
+    by month, day of the week, and hour.
     Set subplot to True for side-by-side and similarly scaled plots. Easier for comparisons.
     Otherwise plot each year individually.
     """
@@ -590,12 +602,6 @@ def visualize_six(cleaned_df, year_df_dict, month=True, weekday=True, hour=True,
             plt.show()
         for year in YEARS:
             plot_multiple_bar_by_metric(data[year], DAYS, title=f'Accidents in Boroughs by Day of the Week in {year}', xlabel='Day of the Week', ylabel='Accidents')
-            # year_df = year_df_dict[year]
-            # # make a copy to overwrite columns for visualization
-            # year_df = year_df.copy()
-            # year_df['WEEKDAY'] = year_df['CRASH TIME'].dt.weekday
-            # metric = [0, 6]
-            # plot_density_by_metric(year_df, metric, 'WEEKDAY', 'BOROUGH', hue_order=BOROUGH_COORDS.keys(), title=f'Accident Density by Weekday in {year}', xlabel='Weekday', ylabel='Accident Density')
 
     if hour:
         print('hours')
@@ -626,9 +632,12 @@ def visualize_six(cleaned_df, year_df_dict, month=True, weekday=True, hour=True,
 
 def visualize_seven(year_df_dict, boroughs=BOROUGH_COORDS.keys(), selected_year=None):
     """
+    Filter the dataframe to get the data for plotting a density heat map plot
+    by borough for each year.
     By default plot all years in the dict and for all boroughs.
     Optionally specify a single year or list of boroughs.
     """
+    # make sure the optional selected year is within acceptable range
     if selected_year is not None:
         assert selected_year > 2012 and selected_year < 2021
     for borough in boroughs:
@@ -684,6 +693,7 @@ def visualize_three():
         column_value_df = filtered_data[filtered_data[column] == 0]
         counts['VEHICLE ONLY'].append(column_value_df.shape[0])
     plot_multiple_bar_by_metric(counts, YEARS, title='Involved Parties by Year', xlabel='Year', ylabel='Accidents')
+
 
 def visualize_eight():
     """
