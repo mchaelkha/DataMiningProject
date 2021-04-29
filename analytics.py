@@ -356,11 +356,10 @@ def plot_density_by_metric(df, metric, metric_name, hue, hue_order=[], title='',
         colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
         colors.append(u'slateblue')
         colors.append(u'lightgreen')
-    sns.set_palette(sns.color_palette(colors))
     if not hue_order:
         sns.kdeplot(data=df, x=metric_name, hue=hue, legend=legend)
     else:
-        sns.kdeplot(data=df, x=metric_name, hue=hue, hue_order=hue_order, legend=legend)
+        sns.kdeplot(data=df, x=metric_name, hue=hue, hue_order=hue_order, palette=colors[:len(hue_order)], legend=legend)
     # add title, labels, legend
     plt.xlim(metric[0], metric[1])
     plt.title(title)
@@ -627,6 +626,15 @@ def visualize_six(cleaned_df, year_df_dict, month=True, weekday=True, hour=True,
             year_df['HOUR'] = year_df['CRASH TIME'].dt.hour
             metric = [0, 23]
             plot_density_by_metric(year_df, metric, 'HOUR', 'BOROUGH', hue_order=BOROUGH_COORDS.keys(), title=f'Accident Density in Boroughs by Hour in {year}', xlabel='Hour', ylabel='Accident Density')
+        # density plot by hour for each year from 2013 to 2020
+        for borough in BOROUGH_COORDS.keys():
+            temp_df = df_filter_by(cleaned_df, 'borough', borough)
+            temp_df = temp_df.copy()
+            temp_df = df_between_years(temp_df, 2013, 2020)
+            temp_df['HOUR'] = temp_df['CRASH TIME'].dt.hour
+            temp_df['YEAR'] = temp_df['CRASH TIME'].dt.year
+            metric = [0, 23]
+            plot_density_by_metric(temp_df, metric, 'HOUR', 'YEAR', hue_order=list(YEARS), title=f'Accident Density by Hour in {borough.title()} for Each Year', xlabel='Hour', ylabel='Accident Density')
 
 
 def visualize_seven(year_df_dict, boroughs=BOROUGH_COORDS.keys(), selected_year=None):
@@ -726,7 +734,7 @@ def run_visualizations(cleaned_df, year_df_dict, subplot=False):
     visualize_three()
     visualize_four(cleaned_df)
     visualize_five(cleaned_df, year_df_dict, subplot=subplot)
-    visualize_six(cleaned_df, year_df_dict, subplot=subplot)
+    visualize_six(cleaned_df, year_df_dict, month=False, weekday=False, subplot=subplot)
     visualize_seven(year_df_dict)
     visualize_eight()
 
@@ -739,4 +747,4 @@ def run_visualizations(cleaned_df, year_df_dict, subplot=False):
 if __name__ == '__main__':
     cleaned_df, year_df_dict = read_data()
     # cleaned_df, year_df_dict = load_from_saved()
-    run_visualizations(cleaned_df, year_df_dict, subplot=False)
+    run_visualizations(cleaned_df, year_df_dict)
