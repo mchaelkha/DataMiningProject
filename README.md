@@ -1,5 +1,4 @@
 # DataMiningProject
-
 Dataset can be found here: https://data.cityofnewyork.us/Public-Safety/Motor-Vehicle-Collisions-Crashes/h9gi-nx95
 ## Requirements
 - Python 3
@@ -21,3 +20,16 @@ Dataset can be found here: https://data.cityofnewyork.us/Public-Safety/Motor-Veh
 - Download latest basemap release from https://github.com/matplotlib/basemap/releases/.
   Unzip the X.Y.Z source tar.gz file and cd to the basemap-X.Y.Z directory.
   Then run `python setup.py install`.
+
+## Usage
+
+### Data Cleaning
+- Some visualizations require external cleaning to do this run `python data_cleaner.py`
+- Before running ensure you have the downloaded the Dataset described above and named it `Motor_Vehicle_Collisions_-_Crashes.csv`.
+- A file called `Clean_Motor_Vehicle_Collisions_-_Crashes.csv` should be generated after running the data cleaning script.
+
+### Generating Visualizations
+- Visualizations can be generated via running `python analytics.py`
+- Before running ensure you have the downloaded the Dataset described above and named it `Motor_Vehicle_Collisions_-_Crashes.csv`.
+- Before running ensure you have performed the steps described under Data Cleaning
+
