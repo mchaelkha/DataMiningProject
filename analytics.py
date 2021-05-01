@@ -454,12 +454,12 @@ def plot_basemap_heat_density(borough_df, borough, xprecision=3, yprecision=3, n
     extent = BOROUGH_EXTENT[borough]
     llcrnrlon, urcrnrlon, llcrnrlat, urcrnrlat = extent
     # use image of borough map as background
-    m = Basemap(llcrnrlon=llcrnrlon,
-            llcrnrlat=llcrnrlat,
-            urcrnrlon=urcrnrlon,
-            urcrnrlat=urcrnrlat)
+    map = Basemap(llcrnrlon=llcrnrlon,
+                  llcrnrlat=llcrnrlat,
+                  urcrnrlon=urcrnrlon,
+                  urcrnrlat=urcrnrlat)
     im = Image.open(f'{borough.lower()}.png')
-    m.imshow(im, origin='upper', alpha=0.85, extent=extent)
+    map.imshow(im, origin='upper', alpha=0.85, extent=extent)
 
     # add axis settings
     xlabels = np.around(np.linspace(llcrnrlon, urcrnrlon, xprecision), 2)
@@ -468,17 +468,17 @@ def plot_basemap_heat_density(borough_df, borough, xprecision=3, yprecision=3, n
     ax.set_ylim(llcrnrlat, urcrnrlat)
     ax.set_xticks(xlabels)
     ax.set_yticks(ylabels)
-    m.drawmeridians(xlabels, labels=[1,0,0,0], linewidth=0)
-    m.drawparallels(ylabels, labels=[0,0,0,1], linewidth=0)
+    map.drawmeridians(xlabels, labels=[1,0,0,0], linewidth=0)
+    map.drawparallels(ylabels, labels=[0,0,0,1], linewidth=0)
 
     # generate density contours
     levels = np.linspace(0, density_values.max(), num_levels)
-    m.contourf(lon_values, lat_values, density_values, levels=levels, cmap=cmap, \
-        alpha=0.5, extent=np.around([lon.min(), lon.max(), lat.min(), lat.max()], 3))
+    map.contourf(lon_values, lat_values, density_values, levels=levels, cmap=cmap,
+                 alpha=0.5, extent=np.around([lon.min(), lon.max(), lat.min(), lat.max()], 3))
 
     # show contour bar
     if colorbar:
-        m.colorbar(pad=0.5)
+        map.colorbar(pad=0.5)
 
     plt.title(title)
 
