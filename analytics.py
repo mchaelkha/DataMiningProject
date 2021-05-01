@@ -668,6 +668,40 @@ def visualize_seven(year_df_dict, boroughs=BOROUGH_COORDS.keys(), selected_year=
             title = f'Accident Density in {borough.title()} in {selected_year}'
             plot_basemap_heat_density(borough_df, borough, title=title)
 
+def query_accidents_by_deaths_and_month(cleaned_df, print_step=False):
+    """
+    retrieves the number of accident deaths by each month, also returns
+    the ratio of deaths to accidents in each month
+    """
+    death_counts = defaultdict(list)
+    death_ratio = defaultdict(list)
+    for year in YEARS:
+        if print_step:
+            print('Showing year:', year)
+        year_df = df_filter_by(cleaned_df, 'year', year)
+        for month in MONTHS.keys():
+            month_df = df_filter_by(year_df, 'month', month)
+            deaths = month_df['NUMBER OF PERSONS KILLED'].sum()
+            if print_step:
+                print('   ', MONTHS[month], deaths)
+            death_counts[MONTHS[month]].append(deaths)
+            death_ratio[MONTHS[month]].append(deaths/month_df.shape[0])
+    return YEARS, death_counts, death_ratio
+
+
+def visualize_nine(cleaned_df):
+    """ graphs the histograms for 9, accident deaths by month and accident death ratio by month"""
+    years, data, data_with_ratio = query_accidents_by_deaths_and_month(cleaned_df, print_step=True)
+    fig = plt.figure()
+    plot_multiple_bar_by_metric(data, years,
+                                title=f'Accidents Deaths by Month from 2013 to 2020', xlabel='Month',
+                                ylabel='Deaths')
+    plt.show()
+    fig = plt.figure()
+    plot_multiple_bar_by_metric(data_with_ratio, years,
+                                title=f'Death to Accident Ratio by Month from 2013 to 2020', xlabel='Month',
+                                ylabel='Death to Accident Ratio')
+    plt.show()
 
 def visualize_three():
     """
