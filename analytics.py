@@ -779,6 +779,7 @@ def run_visualizations(cleaned_df, year_df_dict, subplot=False):
     visualize_six(cleaned_df, year_df_dict, month=False, weekday=False, subplot=subplot)
     visualize_seven(year_df_dict)
     visualize_eight()
+    visualize_nine(cleaned_df)
 
 
 # ============================================================== #
