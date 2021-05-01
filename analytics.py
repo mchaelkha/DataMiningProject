@@ -661,15 +661,23 @@ def visualize_three():
     # read in cleaned data - visualization specific
     cleaned_df = pd.read_csv(CLEAN_MOTOR_VEHICLE_COLLISIONS_CSV)
     # creates a dictionary where each key maps to a list
-    counts = defaultdict(list)
+    counts_total = defaultdict(list)
+    counts_percentage= defaultdict(list)
     for year in YEARS:
         filtered_data = cleaned_df[cleaned_df['CRASH YEAR {}'.format(year)] == 1]
+        total_year_count = 0
         for column in ['Drug Related Factor', 'Personal Factor', 'Environmental Cause Factor', 'Failure To Obey Traffic Factor']:
             # remove rows from df that don't contain column_value in column_name column
             column_value_df = filtered_data[filtered_data[column] == 1]
 
-            counts[column].append(column_value_df.shape[0])
-    plot_multiple_bar_by_metric(counts, YEARS, title='Accident Causation by Year', xlabel='Year', ylabel='Accidents')
+            counts_total[column].append(column_value_df.shape[0])
+            total_year_count += column_value_df.shape[0]
+        for column in counts_total:
+            counts_percentage[column].append(counts_total[column][-1] / total_year_count)
+
+    plot_multiple_bar_by_metric(counts_total, YEARS, title='Accident Causation Counts by Year', xlabel='Year', ylabel='Accidents')
+
+    plot_multiple_bar_by_metric(counts_percentage, YEARS, title='Accident Causation Percentages by Year', xlabel='Year', ylabel='Accidents')
 
     # creates a dictionary where each key maps to a list
     counts = defaultdict(list)

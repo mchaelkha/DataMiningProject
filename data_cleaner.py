@@ -49,14 +49,14 @@ ENVIRONMENTAL_FACTORS = {'View Obstructed/Limited', 'Animals Action', 'Steering 
                          'Reaction to Uninvolved Vehicle', 'Lane Marking Improper/Inadequate'}
 # factors that are generalized to be personal implications that are non drug related
 PERSONAL_NON_DRUG_FACTORS = {'Driver Inattention/Distraction', 'Driver Inexperience', 'Lost Consciousness',
-                                     'Fell Asleep', 'Illnes', 'Aggressive Driving/Road Rage',
-                                     'Using On Board Navigation Device', 'Cell Phone (hand-Held)',
-                                     'Listening/Using Headphones', 'Physical Disability', 'Illness',
-                                     'Other Electronic Device', 'Shoulders Defective/Improper',
-                                     'Eating or Drinking', 'Texting', 'Vehicle Vandalism', 'Cell Phone (hand-held)',
-                                     'Cell Phone (hands-free)'}
+                             'Fell Asleep', 'Illnes', 'Aggressive Driving/Road Rage',
+                             'Using On Board Navigation Device', 'Cell Phone (hand-Held)',
+                             'Listening/Using Headphones', 'Physical Disability', 'Illness',
+                             'Other Electronic Device', 'Shoulders Defective/Improper',
+                             'Eating or Drinking', 'Texting', 'Vehicle Vandalism', 'Cell Phone (hand-held)',
+                             'Cell Phone (hands-free)', 'Fatigued/Drowsy'}
 # factors that are generalized to be drug related in nature
-PERSONAL_DRUG_RELATED_FACTORS = {'Alcohol Involvement', 'Fatigued/Drowsy', 'Drugs (illegal)',
+PERSONAL_DRUG_RELATED_FACTORS = {'Alcohol Involvement', 'Drugs (illegal)',
                                  'Aggressive Driving/Road Rage', 'Prescription Medication', 'Drugs (Illegal)'}
 
 # mapping of column_names to sets of causation
